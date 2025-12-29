@@ -1,0 +1,98 @@
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: cep-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: cep_crawler
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cep-network
+
+  # ElasticMQ (SQS-compatible message queue)
+  elasticmq:
+    image: softwaremill/elasticmq-native:1.5.7
+    container_name: cep-elasticmq
+    ports:
+      - "9324:9324"
+      - "9325:9325"
+    volumes:
+      - ./elasticmq.conf:/opt/elasticmq.conf
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9325/ >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cep-network
+
+  # API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: cep-api
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/cep_crawler
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - SQS_ENDPOINT=http://elasticmq:9324
+      - SQS_QUEUE_URL=http://elasticmq:9324/000000000000/cep-queue
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      elasticmq:
+        condition: service_healthy
+    networks:
+      - cep-network
+    restart: unless-stopped
+
+  # Worker Service
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/cep_crawler
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - SQS_ENDPOINT=http://elasticmq:9324
+      - SQS_QUEUE_URL=http://elasticmq:9324/000000000000/cep-queue
+      - WORKER_CONCURRENCY=10
+      - WORKER_MAX_RETRIES=3
+      - WORKER_RETRY_DELAY_MS=1000
+      - VIACEP_BASE_URL=https://viacep.com.br/ws
+      - VIACEP_RATE_LIMIT=10
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      elasticmq:
+        condition: service_healthy
+    networks:
+      - cep-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  cep-network:
+    driver: bridge
