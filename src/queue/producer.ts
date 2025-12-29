@@ -1,3 +1,4 @@
+import { SendMessageCommand, SendMessageBatchCommand } from '@aws-sdk/client-sqs';
 import { getSQSClient, getQueueUrl } from '../config/queue';
 import { createCepMessage } from './types';
 import logger from '../utils/logger';
@@ -25,7 +26,7 @@ export class QueueProducer {
     };
 
     try {
-      await this.sqs.sendMessage(params).promise();
+      await this.sqs.send(new SendMessageCommand(params));
     } catch (error) {
       logger.error({ err: error, cep, crawlId }, 'Erro ao enviar mensagem para fila');
       throw error;
@@ -82,7 +83,7 @@ export class QueueProducer {
     };
 
     try {
-      const result = await this.sqs.sendMessageBatch(params).promise();
+      const result = await this.sqs.send(new SendMessageBatchCommand(params));
 
       if (result.Failed && result.Failed.length > 0) {
         logger.warn({ batchIndex, failed: result.Failed }, 'Falhas ao enviar batch');

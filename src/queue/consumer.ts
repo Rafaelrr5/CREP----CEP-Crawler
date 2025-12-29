@@ -1,3 +1,4 @@
+import { ReceiveMessageCommand, DeleteMessageCommand } from '@aws-sdk/client-sqs';
 import { getSQSClient, getQueueUrl } from '../config/queue';
 import logger from '../utils/logger';
 import { parseCepMessage, CepMessage } from './types';
@@ -29,7 +30,7 @@ export class QueueConsumer {
     };
 
     try {
-      const result = await this.sqs.receiveMessage(params).promise();
+      const result = await this.sqs.send(new ReceiveMessageCommand(params));
 
       if (!result.Messages || result.Messages.length === 0) {
         return [];
@@ -53,7 +54,7 @@ export class QueueConsumer {
     };
 
     try {
-      await this.sqs.deleteMessage(params).promise();
+      await this.sqs.send(new DeleteMessageCommand(params));
     } catch (error) {
       logger.error({ err: error, queueUrl: this.queueUrl }, 'Erro ao deletar mensagem da fila');
       throw error;

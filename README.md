@@ -486,7 +486,6 @@ crawler/
 
 ## 🚧 Melhorias Futuras
 
-- [ ] Adicionar autenticação e autorização
 - [ ] Implementar cache (Redis) para CEPs consultados
 - [ ] Dashboard web para visualização em tempo real
 - [ ] Métricas e observabilidade (Prometheus/Grafana)
@@ -494,7 +493,6 @@ crawler/
 - [ ] CI/CD pipeline
 - [ ] Rate limiting na API
 - [ ] Webhooks para notificar conclusão de crawls
-- [ ] Suporte a múltiplas fontes de CEP
 
 ## 📄 Licença
 

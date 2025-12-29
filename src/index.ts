@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectToDatabase, getDatabase } from './config/database';
 import { getQueueUrl, getSQSClient } from './config/queue';
+import { GetQueueAttributesCommand } from '@aws-sdk/client-sqs';
 import cepRoutes from './routes/cepRoutes';
 import logger from './utils/logger';
 
@@ -45,9 +46,12 @@ app.get('/health', async (_req: Request, res: Response) => {
   try {
     const queueUrl = getQueueUrl('primary');
     const sqs = getSQSClient();
-    await sqs
-      .getQueueAttributes({ QueueUrl: queueUrl, AttributeNames: ['QueueArn'] })
-      .promise();
+    await sqs.send(
+      new GetQueueAttributesCommand({
+        QueueUrl: queueUrl,
+        AttributeNames: ['QueueArn'],
+      })
+    );
     health.queue = 'ok';
   } catch (error) {
     logger.error({ err: error }, 'Healthcheck queue failed');
