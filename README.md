@@ -13,6 +13,43 @@ Sistema backend em Node.js/TypeScript que processa intervalos de CEPs de forma a
 - ✅ Orquestração completa via Docker Compose
 - ✅ Logs claros de processamento
 
+## 🧩 Características da Codebase
+
+- **Cache com Redis:** Implementado para otimizar consultas repetidas ao ViaCEP, com TTL configurável para dados e erros (404).
+- **Dashboard e Métricas:** Endpoint `/cep/dashboard/summary` para dados consolidados e `/metrics` expondo métricas no formato Prometheus.
+- **Testes Automatizados:** Testes unitários e de integração configurados com Jest.
+- **CI/CD Pipeline:** Configuração de integração contínua presente.
+- **Rate Limiting na API:** Proteção contra sobrecarga implementada com `express-rate-limit`.
+- **Webhooks:** Sistema de notificação via HTTP POST disparado automaticamente ao finalizar um crawl.
+
+## 🎓 Conceitos Implementados
+
+### Arquitetura Assíncrona
+
+- **Non-blocking API:** Responde imediatamente sem aguardar processamento
+- **Message Queue:** Desacoplamento entre produtor e consumidor
+- **Background Workers:** Processamento independente e escalável
+
+### Confiabilidade
+
+- **Retry Logic:** Tentativas automáticas em caso de falha
+- **Dead Letter Queue:** Isolamento de mensagens problemáticas
+- **Graceful Shutdown:** Encerramento controlado dos serviços
+- **Health Checks:** Verificação de disponibilidade dos serviços
+
+### Performance
+
+- **Concorrência Controlada:** Processamento paralelo com limites
+- **Rate Limiting:** Respeito aos limites da API externa
+- **Batch Processing:** Envio de mensagens em lote
+- **Índices MongoDB:** Consultas otimizadas
+
+### Escalabilidade
+
+- **Horizontal Scaling:** Múltiplos workers podem ser adicionados
+- **Stateless Workers:** Não mantém estado entre processamentos
+- **Queue-based:** Fila distribui trabalho automaticamente
+
 ## 🏗️ Arquitetura
 
 ```
@@ -479,44 +516,6 @@ crawler/
 ├── tsconfig.json
 └── README.md
 ```
-
-## 🎓 Conceitos Implementados
-
-### Arquitetura Assíncrona
-
-- **Non-blocking API:** Responde imediatamente sem aguardar processamento
-- **Message Queue:** Desacoplamento entre produtor e consumidor
-- **Background Workers:** Processamento independente e escalável
-
-### Confiabilidade
-
-- **Retry Logic:** Tentativas automáticas em caso de falha
-- **Dead Letter Queue:** Isolamento de mensagens problemáticas
-- **Graceful Shutdown:** Encerramento controlado dos serviços
-- **Health Checks:** Verificação de disponibilidade dos serviços
-
-### Performance
-
-- **Concorrência Controlada:** Processamento paralelo com limites
-- **Rate Limiting:** Respeito aos limites da API externa
-- **Batch Processing:** Envio de mensagens em lote
-- **Índices MongoDB:** Consultas otimizadas
-
-### Escalabilidade
-
-- **Horizontal Scaling:** Múltiplos workers podem ser adicionados
-- **Stateless Workers:** Não mantém estado entre processamentos
-- **Queue-based:** Fila distribui trabalho automaticamente
-
-## 🚧 Melhorias Futuras
-
-- [x] Implementar cache (Redis) para CEPs consultados
-- [x] Dashboard web para visualização em tempo real (endpoint de resumo pronto para consumir em UI)
-- [x] Métricas e observabilidade (endpoint Prometheus /metrics)
-- [x] Testes automatizados (unit + integration) básicos
-- [x] CI/CD pipeline
-- [x] Rate limiting na API
-- [x] Webhooks para notificar conclusão de crawls
 
 ## 📄 Licença
 
