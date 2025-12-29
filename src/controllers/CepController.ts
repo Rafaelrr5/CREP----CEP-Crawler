@@ -146,4 +146,18 @@ export class CepController {
       });
     }
   }
+
+  /**
+   * GET /cep/dashboard/summary
+   * Retorna estatísticas para dashboard em tempo real
+   */
+  async getDashboardSummary(_req: Request, res: Response): Promise<void> {
+    try {
+      const summary = await crawlService.getDashboardSummary();
+      res.status(200).json(summary);
+    } catch (error) {
+      logger.error({ err: error }, 'Erro em getDashboardSummary');
+      res.status(500).json({ error: 'Erro interno ao consultar dashboard' });
+    }
+  }
 }

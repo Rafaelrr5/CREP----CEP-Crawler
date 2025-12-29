@@ -1,8 +1,12 @@
 import axios from 'axios';
 import { ViaCepService } from './ViaCepService';
+import getRedisClient from '../config/redis';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+jest.mock('../config/redis');
+const mockedRedis = getRedisClient as jest.MockedFunction<typeof getRedisClient>;
 
 describe('ViaCepService', () => {
   let service: ViaCepService;
@@ -10,6 +14,7 @@ describe('ViaCepService', () => {
   beforeEach(() => {
     service = new ViaCepService();
     jest.clearAllMocks();
+    mockedRedis.mockReturnValue(null);
   });
 
   it('should return data for a valid CEP', async () => {
@@ -49,5 +54,35 @@ describe('ViaCepService', () => {
     mockedAxios.isAxiosError.mockReturnValue(true);
 
     await expect(service.consultarCep('01001000')).rejects.toThrow('Erro ao consultar ViaCEP: Network Error');
+  });
+
+  it('should use cache when available', async () => {
+    const mockRedis = {
+      get: jest.fn().mockResolvedValue(JSON.stringify({ cep: '01001-000' })),
+      set: jest.fn(),
+    } as any;
+    mockedRedis.mockReturnValue(mockRedis);
+
+    const result = await service.consultarCep('01001000');
+
+    expect(result).toEqual({ cep: '01001-000' } as any);
+    expect(mockRedis.get).toHaveBeenCalled();
+    expect(mockRedis.set).not.toHaveBeenCalled();
+  });
+
+  it('should write to cache on success', async () => {
+    const mockRedis = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue('OK'),
+    } as any;
+    mockedRedis.mockReturnValue(mockRedis);
+
+    const mockData = { cep: '01001-000' } as any;
+    mockedAxios.get.mockResolvedValueOnce({ data: mockData });
+
+    const result = await service.consultarCep('01001000');
+
+    expect(result).toEqual(mockData);
+    expect(mockRedis.set).toHaveBeenCalled();
   });
 });

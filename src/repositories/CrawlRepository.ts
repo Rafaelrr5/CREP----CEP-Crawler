@@ -52,19 +52,63 @@ export class CrawlRepository {
     );
   }
 
-  async checkIfFinished(crawlId: string): Promise<boolean> {
-    const crawl = await this.findById(crawlId);
-    if (!crawl) return false;
+  async checkIfFinished(crawlId: string): Promise<Crawl | null> {
+    const result = await this.getCollection().findOneAndUpdate(
+      {
+        _id: crawlId,
+        status: { $ne: 'finished' },
+        $expr: { $gte: ['$processed', '$total'] },
+      } as any,
+      {
+        $set: { status: 'finished', updated_at: new Date() },
+      },
+      { returnDocument: 'after' }
+    );
 
-    if (crawl.processed >= crawl.total) {
-      await this.updateStatus(crawlId, 'finished');
-      return true;
-    }
-
-    return false;
+    const value = (result as any)?.value as Crawl | undefined;
+    return value ?? null;
   }
 
   async setRunning(crawlId: string): Promise<void> {
     await this.updateStatus(crawlId, 'running');
+  }
+
+  async getSummary(limitRecent: number = 10): Promise<{
+    totals: Record<string, number>;
+    aggregate: { totalCrawls: number; totalProcessed: number; totalSuccess: number; totalErrors: number };
+    recent: Crawl[];
+  }> {
+    const [byStatus, recent, totalCrawls] = await Promise.all([
+      this.getCollection()
+        .aggregate([
+          { $group: { _id: '$status', count: { $sum: 1 }, processed: { $sum: '$processed' }, success: { $sum: '$success' }, error: { $sum: '$error' } } },
+        ])
+        .toArray(),
+      this.getCollection().find().sort({ created_at: -1 }).limit(limitRecent).toArray(),
+      this.getCollection().countDocuments(),
+    ]);
+
+    const totals: Record<string, number> = {};
+    let totalProcessed = 0;
+    let totalSuccess = 0;
+    let totalErrors = 0;
+
+    byStatus.forEach((item) => {
+      totals[item._id] = item.count;
+      totalProcessed += item.processed || 0;
+      totalSuccess += item.success || 0;
+      totalErrors += item.error || 0;
+    });
+
+    return {
+      totals,
+      aggregate: {
+        totalCrawls,
+        totalProcessed,
+        totalSuccess,
+        totalErrors,
+      },
+      recent,
+    };
   }
 }

@@ -65,4 +65,8 @@ export class CrawlService {
     // Buscar resultados paginados
     return this.cepResultRepository.findByCrawlId(crawlId, page, limit);
   }
+
+  async getDashboardSummary() {
+    return this.crawlRepository.getSummary();
+  }
 }

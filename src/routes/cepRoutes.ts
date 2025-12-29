@@ -22,4 +22,10 @@ router.get('/crawl/:crawl_id', (req, res) => cepController.getCrawlStatus(req, r
  */
 router.get('/crawl/:crawl_id/results', (req, res) => cepController.getCrawlResults(req, res));
 
+/**
+ * GET /cep/dashboard/summary
+ * Estatísticas consolidadas para dashboard
+ */
+router.get('/dashboard/summary', (req, res) => cepController.getDashboardSummary(req, res));
+
 export default router;

@@ -190,6 +190,18 @@ curl http://localhost:3000/health
 }
 ```
 
+### 5. Dashboard (Resumo para UI)
+
+**GET** `/cep/dashboard/summary`
+
+Retorna contagens por status, agregados de sucesso/erro e últimos crawls para alimentar um frontend.
+
+### 6. Métricas Prometheus
+
+**GET** `/metrics`
+
+Exposição em formato Prometheus com métricas HTTP e de runtime.
+
 ## 🗄️ Modelagem de Dados
 
 ### Collection: `crawls`
@@ -244,11 +256,23 @@ AWS_REGION=us-east-1
 SQS_ENDPOINT=http://elasticmq:9324
 SQS_QUEUE_URL=http://elasticmq:9324/000000000000/cep-queue
 
+# Redis Cache
+REDIS_URL=redis://redis:6379
+REDIS_TTL_SECONDS=86400
+REDIS_NULL_TTL_SECONDS=600
+
 # Worker
 WORKER_CONCURRENCY=10          # Mensagens simultâneas
 WORKER_MAX_RETRIES=3           # Tentativas antes de falha definitiva
 WORKER_RETRY_DELAY_MS=1000     # Delay entre retries
 VIACEP_RATE_LIMIT=10           # Requisições/segundo por worker
+
+# API
+API_RATE_LIMIT_WINDOW_MS=60000 # Janela de rate limit
+API_RATE_LIMIT_MAX=200         # Requisições por janela
+
+# Webhooks (opcional)
+WEBHOOK_URLS=https://exemplo.com/webhook1,https://exemplo.com/webhook2
 ```
 
 ## 🔄 Funcionamento do Sistema
@@ -486,13 +510,13 @@ crawler/
 
 ## 🚧 Melhorias Futuras
 
-- [ ] Implementar cache (Redis) para CEPs consultados
-- [ ] Dashboard web para visualização em tempo real
-- [ ] Métricas e observabilidade (Prometheus/Grafana)
-- [ ] Testes automatizados (unit + integration)
-- [ ] CI/CD pipeline
-- [ ] Rate limiting na API
-- [ ] Webhooks para notificar conclusão de crawls
+- [x] Implementar cache (Redis) para CEPs consultados
+- [x] Dashboard web para visualização em tempo real (endpoint de resumo pronto para consumir em UI)
+- [x] Métricas e observabilidade (endpoint Prometheus /metrics)
+- [x] Testes automatizados (unit + integration) básicos
+- [x] CI/CD pipeline
+- [x] Rate limiting na API
+- [x] Webhooks para notificar conclusão de crawls
 
 ## 📄 Licença
 

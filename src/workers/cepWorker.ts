@@ -5,6 +5,7 @@ import { QueueConsumer, QueueMessage } from '../queue/consumer';
 import { ViaCepService } from '../services/ViaCepService';
 import { CrawlRepository } from '../repositories/CrawlRepository';
 import { CepResultRepository } from '../repositories/CepResultRepository';
+import WebhookService from '../services/WebhookService';
 import logger from '../utils/logger';
 
 const MESSAGE_CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || '10', 10);
@@ -17,6 +18,7 @@ export class CepWorker {
   private viaCepService: ViaCepService;
   private crawlRepository: CrawlRepository;
   private cepResultRepository: CepResultRepository;
+  private webhookService: WebhookService;
   private messageLimit = pLimit(MESSAGE_CONCURRENCY);
   private viaCepLimiter: Bottleneck;
   private isProcessing = false;
@@ -26,6 +28,7 @@ export class CepWorker {
     this.viaCepService = new ViaCepService();
     this.crawlRepository = new CrawlRepository();
     this.cepResultRepository = new CepResultRepository();
+    this.webhookService = new WebhookService();
     this.viaCepLimiter = new Bottleneck({
       reservoir: VIACEP_RATE_PER_SECOND,
       reservoirRefreshAmount: VIACEP_RATE_PER_SECOND,
@@ -114,7 +117,11 @@ export class CepWorker {
       await this.crawlRepository.incrementProcessed(crawl_id, data !== null);
 
       // Verificar se finalizou
-      await this.crawlRepository.checkIfFinished(crawl_id);
+      const finishedCrawl = await this.crawlRepository.checkIfFinished(crawl_id);
+
+      if (finishedCrawl) {
+        await this.webhookService.notifyCrawlFinished(finishedCrawl);
+      }
 
       await this.consumer.deleteMessage(message.receiptHandle);
 
@@ -135,7 +142,10 @@ export class CepWorker {
         });
 
         await this.crawlRepository.incrementProcessed(crawl_id, false);
-        await this.crawlRepository.checkIfFinished(crawl_id);
+        const finishedCrawl = await this.crawlRepository.checkIfFinished(crawl_id);
+        if (finishedCrawl) {
+          await this.webhookService.notifyCrawlFinished(finishedCrawl);
+        }
         await this.consumer.deleteMessage(message.receiptHandle);
 
         logger.warn({ crawl_id, cep }, 'Mensagem DLQ marcada como falha definitiva');

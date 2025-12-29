@@ -1,6 +1,8 @@
 import express, { Application, NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+import client from 'prom-client';
 import { connectToDatabase, getDatabase } from './config/database';
 import { getQueueUrl, getSQSClient } from './config/queue';
 import { GetQueueAttributesCommand } from '@aws-sdk/client-sqs';
@@ -12,16 +14,54 @@ dotenv.config();
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
+const RATE_WINDOW_MS = parseInt(process.env.API_RATE_LIMIT_WINDOW_MS || '60000', 10);
+const RATE_MAX = parseInt(process.env.API_RATE_LIMIT_MAX || '200', 10);
+
+// Prometheus metrics
+client.collectDefaultMetrics();
+const httpRequestDuration = new client.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'HTTP request duration in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.05, 0.1, 0.2, 0.5, 1, 2, 5],
+});
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: RATE_WINDOW_MS,
+  limit: RATE_MAX,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+app.use(limiter);
+
 // Logging middleware
 app.use((req, _res, next) => {
   logger.info({ method: req.method, path: req.path }, 'HTTP request received');
   next();
+});
+
+// HTTP metrics middleware
+app.use((req, res, next) => {
+  const end = httpRequestDuration.startTimer();
+
+  res.on('finish', () => {
+    const route = (req as any).route?.path || req.path;
+    end({ method: req.method, route, status_code: res.statusCode });
+  });
+
+  next();
+});
+
+// Metrics endpoint
+app.get('/metrics', async (_req: Request, res: Response) => {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
 });
 
 // Health check

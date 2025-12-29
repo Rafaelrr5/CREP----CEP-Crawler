@@ -34,6 +34,19 @@ services:
     networks:
       - cep-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: cep-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - cep-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # API Service
   api:
     build:
@@ -46,15 +59,20 @@ services:
       - PORT=3000
       - NODE_ENV=production
       - MONGODB_URI=mongodb://mongodb:27017/cep_crawler
+      - REDIS_URL=redis://redis:6379
       - AWS_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=local
       - SQS_ENDPOINT=http://elasticmq:9324
       - SQS_QUEUE_URL=http://elasticmq:9324/000000000000/cep-queue
+      - API_RATE_LIMIT_WINDOW_MS=60000
+      - API_RATE_LIMIT_MAX=200
     depends_on:
       mongodb:
         condition: service_healthy
       elasticmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - cep-network
@@ -68,6 +86,7 @@ services:
     environment:
       - NODE_ENV=production
       - MONGODB_URI=mongodb://mongodb:27017/cep_crawler
+      - REDIS_URL=redis://redis:6379
       - AWS_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=local
       - AWS_SECRET_ACCESS_KEY=local
@@ -78,10 +97,14 @@ services:
       - WORKER_RETRY_DELAY_MS=1000
       - VIACEP_BASE_URL=https://viacep.com.br/ws
       - VIACEP_RATE_LIMIT=10
+      - REDIS_TTL_SECONDS=86400
+      - REDIS_NULL_TTL_SECONDS=600
     depends_on:
       mongodb:
         condition: service_healthy
       elasticmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - cep-network
