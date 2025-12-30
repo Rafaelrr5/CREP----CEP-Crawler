@@ -54,8 +54,8 @@ describe('cepUtils', () => {
     });
 
     it('should return error if range is too large', () => {
-      // 100001 CEPs
-      expect(validateCepRange('00000000', '00100001')).toEqual({ valid: false, error: 'Range muito grande. Máximo de 100.000 CEPs por requisição' });
+      // 10001 CEPs (excede o limite de 10.000)
+      expect(validateCepRange('00000000', '00010000')).toEqual({ valid: false, error: 'Range muito grande. Máximo de 10.000 CEPs por requisição' });
     });
   });
 });

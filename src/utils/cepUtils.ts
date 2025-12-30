@@ -52,8 +52,8 @@ export const validateCepRange = (cepStart: string, cepEnd: string): { valid: boo
   }
 
   const totalCeps = end - start + 1;
-  if (totalCeps > 100000) {
-    return { valid: false, error: 'Range muito grande. Máximo de 100.000 CEPs por requisição' };
+  if (totalCeps > 10000) {
+    return { valid: false, error: 'Range muito grande. Máximo de 10.000 CEPs por requisição' };
   }
 
   return { valid: true };
